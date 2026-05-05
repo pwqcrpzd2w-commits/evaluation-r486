@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Evaluation Autorisation de conduite R486</title>
+<meta name="description" content="Fiche web d'evaluation pratique R486 pour autorisation de conduite PEMP, avec calcul automatique et export PDF.">
+<meta name="theme-color" content="#146c63">
+<meta property="og:title" content="Evaluation Autorisation de conduite R486">
+<meta property="og:description" content="Fiche d'evaluation pratique R486 publiable sur GitHub Pages.">
+<meta property="og:type" content="website">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<style>
+:root{
+  --bg:#e9edf1;
+  --panel:#ffffff;
+  --surface:#f7f9fb;
+  --surface-strong:#edf3f6;
+  --border:#cbd5dc;
+  --border-strong:#aebdc6;
+  --text:#1d2733;
+  --muted:#627181;
+  --accent:#146c63;
+  --accent-dark:#0d4f49;
+  --accent-soft:#e2f3ef;
+  --danger:#b42318;
+  --danger-soft:#fff0ed;
+  --warn:#9a5b05;
+  --warn-soft:#fff7d8;
+  --success:#1f7a4d;
+  --success-soft:#eaf7ef;
+  --shadow:0 18px 42px rgba(18,33,47,0.13);
+}
+
+*{box-sizing:border-box;}
+
+body{
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+  margin:0;
+  background:
+    linear-gradient(180deg,#f9fbfc 0%,var(--bg) 58%,#dde5e8 100%);
+  color:var(--text);
+  line-height:1.45;
+}
+
+.page{
+  padding:24px;
+}
+
+.report-shell{
+  max-width:980px;
+  margin:0 auto;
+  background:var(--panel);
+  border:1px solid rgba(174,189,198,0.75);
+  border-radius:8px;
+  box-shadow:var(--shadow);
+  overflow:hidden;
+}
+
+.report{
+  padding:0 24px 24px;
+}
+
+.report-header{
+  display:flex;
+  justify-content:space-between;
+  gap:16px;
+  align-items:flex-start;
+  margin:0 -24px 22px;
+  padding:24px;
+  color:#fff;
+  background:
+    linear-gradient(135deg,#12384a 0%,#146c63 56%,#597b55 100%);
+}
+
+.report-header h1{
+  margin:0 0 6px;
+  font-size:26px;
+  line-height:1.15;
+  font-weight:800;
+}
+
+.report-header p{
+  margin:0;
+  color:rgba(255,255,255,0.82);
+  font-size:14px;
+}
+
+.badge{
+  min-width:118px;
+  padding:9px 13px;
+  border:1px solid rgba(255,255,255,0.36);
+  border-radius:999px;
+  background:rgba(255,255,255,0.14);
+  color:#fff;
+  font-weight:700;
+  text-align:center;
+  white-space:nowrap;
+}
+
+.identity-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+  gap:12px;
+  margin-bottom:16px;
+  padding:16px;
+  border:1px solid var(--border);
+  border-radius:8px;
+  background:var(--surface);
+}
+
+.field{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+
+.field label{
+  font-size:12px;
+  font-weight:700;
+  color:#384859;
+}
+
+.field input,
+.field select{
+  width:100%;
+  min-height:40px;
+  padding:9px 11px;
+  border:1px solid var(--border);
+  border-radius:6px;
+  font-size:14px;
+  background:#fff;
+  color:var(--text);
+}
+
+.field input:focus,
+.field select:focus{
+  outline:3px solid rgba(20,108,99,0.16);
+  border-color:var(--accent);
+}
+
+.summary{
+  display:grid;
+  grid-template-columns:2fr 1fr;
+  gap:12px;
+  margin-bottom:22px;
+}
+
+.summary-card{
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:16px;
+  background:#fff;
+}
+
+.summary-card h2{
+  margin:0 0 12px;
+  font-size:17px;
+}
+
+.score-grid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:10px;
+}
+
+.score-item{
+  border-radius:6px;
+  padding:12px;
+  background:var(--surface);
+  border:1px solid #d7e0e5;
+}
+
+.score-item strong{
+  display:block;
+  font-size:12px;
+  color:var(--muted);
+  margin-bottom:4px;
+  min-height:34px;
+}
+
+.score-item span{
+  font-size:24px;
+  font-weight:700;
+  color:#122635;
+}
+
+.status-box{
+  border-radius:8px;
+  padding:16px;
+  border:1px solid transparent;
+  box-shadow:inset 4px 0 0 currentColor;
+}
+
+.status-box.status-incomplete{
+  background:var(--warn-soft);
+  color:var(--warn);
+  border-color:#f5d675;
+}
+
+.status-box.status-pass{
+  background:var(--success-soft);
+  color:var(--success);
+  border-color:#95d5b2;
+}
+
+.status-box.status-fail{
+  background:var(--danger-soft);
+  color:var(--danger);
+  border-color:#f2b8a0;
+}
+
+.status-box strong{
+  display:block;
+  font-size:17px;
+  margin-bottom:6px;
+}
+
+.status-box p{
+  margin:0;
+  font-size:14px;
+  line-height:1.4;
+}
+
+.section-title{
+  margin:24px 0 10px;
+  padding-bottom:7px;
+  border-bottom:2px solid var(--accent);
+  color:#162938;
+  font-size:20px;
+  line-height:1.2;
+}
+
+#app{
+  overflow-x:auto;
+  padding-bottom:4px;
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+  table-layout:fixed;
+  margin:0 0 22px;
+  border:1px solid var(--border-strong);
+  background:#fff;
+}
+
+th,td{
+  border:1px solid var(--border);
+  padding:10px 8px;
+  text-align:center;
+  font-size:14px;
+  vertical-align:middle;
+}
+
+th:first-child,
+td:first-child{
+  text-align:left;
+  width:34%;
+}
+
+th{
+  background:var(--surface-strong);
+  color:#22313f;
+  font-weight:800;
+}
+
+.note-1{background:#f8d4ce;}
+.note-2{background:#f8e1c8;}
+.note-3{background:#fff1b8;}
+.note-4{background:#e7f3bd;}
+.note-5{background:#cff0d3;}
+.note-na{
+  background:#f7f8fa;
+  color:var(--muted);
+  width:46px;
+  min-width:46px;
+  font-size:12px;
+}
+
+.note-na input{
+  opacity:0.58;
+}
+
+input[type="radio"]{
+  width:18px;
+  height:18px;
+  accent-color:var(--accent);
+}
+
+.toolbar{
+  display:flex;
+  gap:10px;
+  justify-content:flex-end;
+  padding:0 24px 24px;
+}
+
+button{
+  min-height:42px;
+  padding:10px 18px;
+  border:none;
+  border-radius:6px;
+  font-weight:700;
+  cursor:pointer;
+  transition:transform 0.12s ease,box-shadow 0.12s ease,background 0.12s ease;
+}
+
+button:disabled{
+  opacity:0.55;
+  cursor:not-allowed;
+}
+
+button:not(:disabled):hover{
+  transform:translateY(-1px);
+  box-shadow:0 8px 16px rgba(18,33,47,0.15);
+}
+
+.print{
+  background:var(--success);
+  color:#fff;
+}
+
+.reset{
+  background:var(--danger);
+  color:#fff;
+}
+
+.helper{
+  margin:10px 0 0;
+  color:var(--muted);
+  font-size:13px;
+}
+
+.status-detail{
+  margin-top:8px;
+  font-size:13px;
+  line-height:1.5;
+}
+
+@media (max-width:760px){
+  .page{
+    padding:12px;
+  }
+
+  .report{
+    padding:0 14px 18px;
+  }
+
+  .report-header,
+  .summary{
+    grid-template-columns:1fr;
+    display:grid;
+  }
+
+  .report-header{
+    margin:0 -14px 16px;
+    padding:18px 14px;
+  }
+
+  .report-header h1{
+    font-size:23px;
+  }
+
+  .score-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+
+  .identity-grid{
+    padding:12px;
+  }
+
+  th,td{
+    padding:8px 6px;
+    font-size:13px;
+  }
+
+  th:first-child,
+  td:first-child{
+    width:32%;
+  }
+
+  .toolbar{
+    padding:0 14px 18px;
+  }
+}
+
+@media print{
+  body{
+    background:#fff;
+  }
+
+  .page,
+  .report{
+    padding:0;
+  }
+
+  .report-shell{
+    box-shadow:none;
+    border-radius:0;
+  }
+
+  .toolbar{
+    display:none;
+  }
+}
+</style>
+</head>
+
+<body>
+<div class="page">
+  <div class="report-shell">
+    <div class="report" id="report">
+      <div class="report-header">
+        <div>
+          <h1>Autorisation de conduite - Evaluation R486</h1>
+          <p>Evaluation pratique avec calcul automatique du resultat.</p>
+        </div>
+        <div class="badge" id="categoryBadge">Categorie A</div>
+      </div>
+
+      <div class="identity-grid">
+        <div class="field">
+          <label for="cat">Categorie R486</label>
+          <select id="cat">
+            <option value="A">A - Elevation verticale</option>
+            <option value="B">B - Elevation multidirectionnelle</option>
+            <option value="C">C - Conduite hors production</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="nom">Nom du stagiaire</label>
+          <input id="nom" placeholder="Nom stagiaire">
+        </div>
+        <div class="field">
+          <label for="formateur">Formateur</label>
+          <input id="formateur" placeholder="Formateur">
+        </div>
+        <div class="field">
+          <label for="org">Organisme</label>
+          <input id="org" placeholder="Organisme">
+        </div>
+        <div class="field">
+          <label for="date">Date d'evaluation</label>
+          <input type="date" id="date">
+        </div>
+      </div>
+
+      <div class="summary">
+        <div class="summary-card">
+          <h2>Resume de l'evaluation</h2>
+          <div class="score-grid">
+            <div class="score-item">
+              <strong>Prise de poste</strong>
+              <span id="scoreA">-</span>
+            </div>
+            <div class="score-item">
+              <strong>Manipulation</strong>
+              <span id="scoreB">-</span>
+            </div>
+            <div class="score-item">
+              <strong>Fin de poste</strong>
+              <span id="scoreC">-</span>
+            </div>
+            <div class="score-item">
+              <strong>Global /100</strong>
+              <span id="scoreGlobal">-</span>
+            </div>
+          </div>
+          <p class="helper" id="progressText">Renseignez l'identite et chaque critere pour finaliser l'evaluation.</p>
+        </div>
+        <div class="status-box status-incomplete" id="statusBox">
+          <strong id="statusTitle">Evaluation incomplete</strong>
+          <p id="statusMessage">Le verdict final sera disponible une fois tous les champs obligatoires et toutes les notes renseignes.</p>
+          <div class="status-detail" id="statusDetail"></div>
+        </div>
+      </div>
+
+      <div id="app"></div>
+    </div>
+
+    <div class="toolbar">
+      <button class="print" id="exportBtn" type="button">PDF</button>
+      <button class="reset" id="resetBtn" type="button">Reset</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const A = [
+  "Exploitation de la notice d'instructions et du rapport de verification periodique",
+  "Verification visuelle de l'etat general de la PEMP",
+  "Essais fonctionnels des commandes, organes de securite et dispositifs d'urgence",
+  "Adequation de la PEMP aux travaux a realiser et a l'environnement"
+];
+
+const C = [
+  "Stationnement securise de la PEMP en fin de poste",
+  "Mise en configuration de transport ou de repos selon la notice",
+  "Compte rendu des anomalies et dysfonctionnements"
+];
+
+const B = {
+  "A":[
+    "Positionnement de la PEMP a elevation verticale dans la zone de travail",
+    "Deplacement en securite en position basse et, si applicable, depuis le poste haut",
+    "Elevation et descente de la plate-forme en respectant les limites d'utilisation",
+    "Maintien des distances de securite avec les obstacles, reseaux et personnes",
+    "Realisation d'une manoeuvre de secours ou d'abaissement d'urgence"
+  ],
+  "B":[
+    "Positionnement de la PEMP a elevation multidirectionnelle dans la zone de travail",
+    "Deplacement en securite en position basse et, si applicable, depuis le poste haut",
+    "Orientation, deport et elevation de la plate-forme avec precision",
+    "Maintien des distances de securite avec les obstacles, reseaux et personnes",
+    "Realisation d'une manoeuvre de secours ou d'abaissement d'urgence"
+  ],
+  "C":[
+    "Prise en main de la PEMP pour deplacement hors production",
+    "Chargement et dechargement sur porte-engin ou remorque adaptee",
+    "Arrimage, calage et verification de la stabilite pour le transport",
+    "Circulation et transfert de la PEMP sans activite de production",
+    "Stationnement et mise en securite apres transfert"
+  ]
+};
+
+function table(list, theme){
+  let html = "<table><tr><th>Critere</th>";
+  html += "<th class='note-na'>N/É</th>";
+  for(let i = 1; i <= 5; i += 1){
+    html += `<th>${i}</th>`;
+  }
+  html += "</tr>";
+
+  list.forEach((criterion, index) => {
+    html += `<tr><td>${criterion}</td>`;
+    html += `<td class="note-na"><input type="radio" name="${theme + index}" value="NA" aria-label="N/É"></td>`;
+    for(let note = 1; note <= 5; note += 1){
+      html += `<td class="note-${note}"><input type="radio" name="${theme + index}" value="${note}"></td>`;
+    }
+    html += "</tr>";
+  });
+
+  html += "</table>";
+  return html;
+}
+
+function avg(values){
+  if(!values.length){
+    return null;
+  }
+  return (values.reduce((sum, value) => sum + value, 0) / values.length) * 20;
+}
+
+function formatScore(value){
+  return value === null ? "-" : value.toFixed(1);
+}
+
+function getMetadata(){
+  const fields = {
+    nom: document.getElementById("nom").value.trim(),
+    formateur: document.getElementById("formateur").value.trim(),
+    org: document.getElementById("org").value.trim(),
+    date: document.getElementById("date").value,
+    cat: document.getElementById("cat").value
+  };
+
+  const missing = [];
+  if(!fields.nom) missing.push("nom du stagiaire");
+  if(!fields.formateur) missing.push("formateur");
+  if(!fields.org) missing.push("organisme");
+  if(!fields.date) missing.push("date d'evaluation");
+
+  return { fields, missing };
+}
+
+function getState(){
+  const category = document.getElementById("cat").value;
+  const sections = { A, B: B[category], C };
+  const scores = { A: [], B: [], C: [] };
+  const answered = { A: 0, B: 0, C: 0 };
+
+  document.querySelectorAll("#app input[type=radio]:checked").forEach((radio) => {
+    const sectionKey = radio.name[0];
+    answered[sectionKey] += 1;
+
+    if(radio.value !== "NA"){
+      scores[sectionKey].push(Number.parseInt(radio.value, 10));
+    }
+  });
+
+  const expected = {
+    A: sections.A.length,
+    B: sections.B.length,
+    C: sections.C.length
+  };
+
+  const missingScores = {
+    A: expected.A - answered.A,
+    B: expected.B - answered.B,
+    C: expected.C - answered.C
+  };
+
+  const Aavg = avg(scores.A);
+  const Bavg = avg(scores.B);
+  const Cavg = avg(scores.C);
+  const completeScores = Object.values(missingScores).every((count) => count === 0);
+  const missingCalculatedSections = [];
+  if(completeScores && Aavg === null) missingCalculatedSections.push("A");
+  if(completeScores && Bavg === null) missingCalculatedSections.push("B");
+  if(completeScores && Cavg === null) missingCalculatedSections.push("C");
+  const metadata = getMetadata();
+  const canCalculate = completeScores && missingCalculatedSections.length === 0;
+  const global = canCalculate ? (Aavg * 0.3) + (Bavg * 0.55) + (Cavg * 0.15) : null;
+  const complete = metadata.missing.length === 0 && canCalculate;
+
+  let status = "incomplete";
+  if(complete){
+    const passed = global >= 70 && Aavg >= 50 && Bavg >= 50 && Cavg >= 50;
+    status = passed ? "pass" : "fail";
+  }
+
+  return {
+    category,
+    metadata,
+    expected,
+    missingScores,
+    missingCalculatedSections,
+    Aavg,
+    Bavg,
+    Cavg,
+    global,
+    complete,
+    status
+  };
+}
+
+function renderStatus(state){
+  const statusBox = document.getElementById("statusBox");
+  const title = document.getElementById("statusTitle");
+  const message = document.getElementById("statusMessage");
+  const detail = document.getElementById("statusDetail");
+  const progress = document.getElementById("progressText");
+
+  statusBox.className = `status-box status-${state.status}`;
+
+  if(state.status === "incomplete"){
+    title.textContent = "Evaluation incomplete";
+    const missingItems = [];
+
+    if(state.metadata.missing.length){
+      missingItems.push(`Champs obligatoires manquants : ${state.metadata.missing.join(", ")}.`);
+    }
+
+    const sectionLabels = { A: "Prise de poste", B: "Manipulation", C: "Fin de poste" };
+    ["A", "B", "C"].forEach((sectionKey) => {
+      if(state.missingScores[sectionKey] > 0){
+        missingItems.push(`${sectionLabels[sectionKey]} : ${state.missingScores[sectionKey]} critere(s) non renseigne(s).`);
+      }
+    });
+
+    if(state.missingCalculatedSections.length){
+      const missingLabels = state.missingCalculatedSections.map((sectionKey) => sectionLabels[sectionKey]).join(", ");
+      missingItems.push(`${missingLabels} : au moins un critere doit etre note de 1 a 5 pour calculer la moyenne.`);
+    }
+
+    message.textContent = "Le verdict final sera disponible une fois l'evaluation complete.";
+    detail.innerHTML = missingItems.join("<br>");
+    progress.textContent = "Export PDF disponible uniquement quand tous les champs obligatoires et toutes les notes sont renseignes.";
+    return;
+  }
+
+  if(state.status === "pass"){
+    title.textContent = "Verdict : RECU";
+    message.textContent = "Le stagiaire atteint les seuils minimaux sur chaque section et au global.";
+    detail.innerHTML = "Evaluation conforme aux seuils requis.";
+    progress.textContent = "Evaluation complete et exportable.";
+    return;
+  }
+
+  title.textContent = "Verdict : ECHEC";
+  const reasons = [];
+  if(state.global < 70) reasons.push("score global inferieur a 70/100");
+  if(state.Aavg < 50) reasons.push("prise de poste inferieure a 50/100");
+  if(state.Bavg < 50) reasons.push("manipulation inferieure a 50/100");
+  if(state.Cavg < 50) reasons.push("fin de poste inferieure a 50/100");
+  message.textContent = reasons.length ? `Motif(s) : ${reasons.join(", ")}.` : "Les criteres de reussite ne sont pas atteints.";
+  detail.innerHTML = "Revoir les criteres notes sous les seuils requis.";
+  progress.textContent = "Evaluation complete et exportable.";
+}
+
+function renderScores(state){
+  document.getElementById("scoreA").textContent = formatScore(state.Aavg);
+  document.getElementById("scoreB").textContent = formatScore(state.Bavg);
+  document.getElementById("scoreC").textContent = formatScore(state.Cavg);
+  document.getElementById("scoreGlobal").textContent = formatScore(state.global);
+  document.getElementById("categoryBadge").textContent = `Categorie ${state.category}`;
+  document.getElementById("exportBtn").disabled = !state.complete;
+}
+
+function calc(){
+  const state = getState();
+  renderScores(state);
+  renderStatus(state);
+  return state;
+}
+
+function load(){
+  const category = document.getElementById("cat").value;
+  document.getElementById("app").innerHTML = [
+    "<h2 class='section-title'>Prise de poste</h2>",
+    table(A, "A"),
+    "<h2 class='section-title'>Manipulation</h2>",
+    table(B[category], "B"),
+    "<h2 class='section-title'>Fin de poste</h2>",
+    table(C, "C")
+  ].join("");
+
+  document.querySelectorAll("#app input").forEach((input) => {
+    input.addEventListener("change", calc);
+  });
+
+  calc();
+}
+
+async function exportPDF(){
+  const state = calc();
+  if(!state.complete){
+    window.alert("Veuillez completer tous les champs obligatoires et toutes les notes avant d'exporter le PDF.");
+    return;
+  }
+
+  if(!window.jspdf || !window.html2canvas){
+    window.alert("L'export PDF est indisponible : les bibliotheques externes ne sont pas chargees.");
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const report = document.getElementById("report");
+  const pdf = new jsPDF("p", "mm", "a4");
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+
+  const canvas = await html2canvas(report, {
+    scale: 2,
+    backgroundColor: "#ffffff",
+    useCORS: true
+  });
+
+  const imgData = canvas.toDataURL("image/png");
+  const imgWidth = pageWidth;
+  const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+  let heightLeft = imgHeight;
+  let position = 0;
+
+  pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+  heightLeft -= pageHeight;
+
+  while(heightLeft > 0){
+    position = heightLeft - imgHeight;
+    pdf.addPage();
+    pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
+  }
+
+  const traineeName = state.metadata.fields.nom.replace(/\s+/g, "_") || "stagiaire";
+  const fileDate = state.metadata.fields.date || "evaluation";
+  pdf.save(`evaluation_R486_${traineeName}_${fileDate}.pdf`);
+}
+
+document.getElementById("cat").addEventListener("change", load);
+document.getElementById("nom").addEventListener("input", calc);
+document.getElementById("formateur").addEventListener("input", calc);
+document.getElementById("org").addEventListener("input", calc);
+document.getElementById("date").addEventListener("change", calc);
+document.getElementById("exportBtn").addEventListener("click", exportPDF);
+document.getElementById("resetBtn").addEventListener("click", () => window.location.reload());
+
+load();
+</script>
+</body>
+</html>
